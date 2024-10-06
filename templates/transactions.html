@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block title %}Transactions{% endblock %}
+
+{% block pagename %}Transactions Management{% endblock %}
+
+{% block inner %}
+<div class="col-md-12">
+    <div class="card">
+        <!-- Card header -->
+        <div class="card-header">
+            <div class="d-flex align-items-center">
+                <h4 class="card-title">Transaction records</h4>
+                <button class="btn btn-primary btn-round ms-auto" data-bs-toggle="modal" data-bs-target="#addRowModal"
+                    id="addRowButton">
+                    <i class="fa fa-plus"></i>
+                    Add Trasactions
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Modal -->
+
+        <!-- Table body -->
+        <div class="card-body">
+            <form method="post" action="/transactions" class="form-group" style="padding-top: 0;">
+                <div class="row">       
+                    <div class="col-5">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary btn-border dropdown-toggle" name="type" id="type">Type</button>
+                                <div class="dropdown-menu">
+                                {% for type in options.transaction_types %}
+                                    {% for id, name in type.items() %}
+                                        <a class="dropdown-item text-start" value="{{ id }}" href="/transations?transaction_type_id={{ id }}">{{ name }}</a>
+                                    {% endfor %}
+                                {% endfor %}  
+                                </div>
+                        </div>
+                        <!-- <ul class="dropdown-menu">
+                            <div class="dropdown-user-scroll scrollbar-outer" style="height: auto;">
+                              <li>
+                                {% for type in options.transaction_types %}
+                                    {% for id, name in type.items() %}
+                                    <a class="dropdown-item" href="/profile.html">My Profile</a>
+                                    {% endfor %}
+                                {% endfor %}  
+                              </li>
+                            </div>
+                          </ul>
+
+                        <div class="input-group-append">
+                            <button class="btn btn-primary btn-border dropdown-toggle" name="category" id="category">Category</button>
+                                <div class="dropdown-menu">
+                                {% for category in options.categories %}
+                                    {% for id, name in category.items() %}
+                                    <a class="dropdown-item text-start" value="{{ id }}" href="{{ url_for('transactions') }}?category={{ id }}">{{ name }}</a>
+                                    {% endfor %}
+                                {% endfor %}
+                                </div>
+                        </div>
+
+                        <div class="input-group-append">
+                            <button class="btn btn-primary btn-border dropdown-toggle" name="wallet" id="wallet">Wallet</button>
+                                <div class="dropdown-menu">
+                                {% for wallet in options.wallets %}
+                                    {% for id, name in wallet.items() %}
+                                        <a class="dropdown-item text-start" value="{{ id }}">{{ name }}</a>
+                                    {% endfor %}
+                                {% endfor %}  
+                                </div>
+                        </div> -->
+                    </div>
+
+                    <div class="col-4">
+                        <input type="date" name="startdate" id="startdate" class="btn btn-primary btn-border">
+                        <label> - </label>
+                        <input type="date" name="enddate" id="enddate" class="btn btn-primary btn-border">
+                    </div>
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="table-responsive">
+                <table id="multi-filter-select" class="display table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Wallet</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.transaction_date|format_date }}</td>
+                            <td>{{ transaction.transaction_type.transaction_type_name }}</td>
+                            <td>{{ transaction.category.category_name }}</td>
+                            <td>{{ transaction.wallet.wallet_name }}</td>
+                            <td>{{ transaction.amount|format_money }}</td>
+                            <td>{{ transaction.description }}</td>
+                            <td>
+                                <div class="form-button-action">
+                                  <button type="button" data-bs-toggle="tooltip" title="" class="btn btn-link btn-primary btn-lg" data-original-title="Edit Task">
+                                    <i class="fa fa-edit"></i>
+                                  </button>
+                                  <button type="button" data-bs-toggle="tooltip" title="" class="btn btn-link btn-danger" data-original-title="Remove">
+                                    <i class="fa fa-times"></i>
+                                  </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="row">
+                {% set start_page = 1 if pagination.page < 3 else pagination.page - 2 %}
+                {% set end_page = start_page + 4 if start_page + 4 <= pagination.pages else pagination.pages %}
+                <div class="col-sm-12 col-md-5">
+                    <div class="dataTables_info" id="trans_table_info" role="status" aria-live="polite">Showing {{ pagination.fromtrans | format_number }} to {{ pagination.totrans | format_number }} of {{ pagination.total | format_number }} transactions
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-7">
+                    <div class="dataTables_paginate paging_simple_numbers" id="trans_table_paginate">
+                        <ul class="pagination">
+                            <li class="paginate_button page-item previous {% if pagination.page == 1 %}disabled{% endif %}"
+                                    id="trans_table_previous"><a href="{{ url_for('transactions') }}?page={{ pagination.page - 1 }}"
+                                    aria-controls="add-row" class="page-link">Previous</a></li>
+
+                            
+                            {% for p in range(start_page, end_page + 1) %}
+                            <li class="paginate_button page-item {% if p == pagination.page %}active{% endif %}">
+                                <a href="/transactions?page={{ p }}" aria-controls="add-row" class="page-link">{{ p }}</a>
+                            </li>
+                            {% endfor %}
+                            
+                            <li class="paginate_button page-item next {% if pagination.page == pagination.pages %}disabled{% endif %}"
+                                    id="trans_table_next"><a href="{{ url_for('transactions') }}?page={{ pagination.page + 1 }}"
+                                    class="page-link">Next</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script>
+    // document.addEventListener('DOMContentLoaded', function () {
+    //     // Date range form elements
+    //     let startdateInput = document.getElementById("startdate");
+    //     let enddateInput = document.getElementById("enddate");
+        
+    //     // Dropdown form elements
+    //     let typeInput = document.getElementById("type");
+    //     let categoryInput = document.getElementById("category");
+    //     let walletInput = document.getElementById("wallet");
+
+    //     // Function to submit the form
+    //     function submitForm(formId) {
+    //         document.getElementById(formId).submit();
+    //     }
+
+    //     // Attach event listeners to trigger the form submission when inputs change
+    //     startdateInput.addEventListener('change', function() { submitForm('date-range-form'); });
+    //     enddateInput.addEventListener('change', function() { submitForm('date-range-form'); });
+    //     typeInput.addEventListener('change', function() { submitForm('type-form'); });
+    //     categoryInput.addEventListener('change', function() { submitForm('category-form'); });
+    //     walletInput.addEventListener('change', function() { submitForm('wallet-form'); });
+    // });
+
+</script>
+{% endblock %}

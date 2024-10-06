@@ -1,0 +1,14 @@
+fastapi
+requests
+pandas
+numpy
+uvicorn
+pydantic
+pyodbc
+python-multipart
+multipart
+jinja2
+SQLAlchemy
+werkzeug
+matplotlib
+plotly
