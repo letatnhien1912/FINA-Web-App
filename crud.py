@@ -54,7 +54,12 @@ def get_wallets(db: Session, user_id: int, liability=None):
 
 def get_wallet_by_name(db: Session, user_id: int, wallet_name: str):
     return db.query(models.Wallet).filter(and_(models.Wallet.user_id == user_id, models.Wallet.wallet_name == wallet_name)).first()
+
 def create_wallet(db: Session, user_id: int, wallet_name: str, liability: int = 0, description: str = None):
+    existing_wallet = db.query(models.Wallet).filter(and_(models.Wallet.user_id == user_id, models.Wallet.wallet_name == wallet_name)).first()
+    if existing_wallet:
+        return ValueError("Wallet exists")
+    
     db_wallet = models.Wallet(user_id=user_id, wallet_name=wallet_name, description=description, liability=liability)
     db.add(db_wallet)
     db.commit()
@@ -257,10 +262,7 @@ def new_user_setup(db: Session,
 
     return True
 
-def get_transaction_types(db: Session):
-    # if len(id_list) > 0:
-    #     # Log the id_list
-    #     print(f"Fetching transaction types for IDs: {id_list}")
-    #     return db.query(models.TransactionType).filter(models.TransactionType.id.in_(id_list)).all()
-
+def get_transaction_types(db: Session, ie=False):
+    if ie:
+        return db.query(models.TransactionType).filter(models.TransactionType.id.in_([1, 2])).all()
     return db.query(models.TransactionType).all()

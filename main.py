@@ -113,7 +113,7 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
     categories = crud.get_categories(db, user_id=user_id)
     wallets = crud.get_wallets(db, user_id=user_id, liability=0)
     debtors = crud.get_wallets(db, user_id=user_id, liability=1)
-    transaction_types = crud.get_transaction_types(db)
+    transaction_types = crud.get_transaction_types(db, ie=True)
     transactions = crud.get_transactions(db, user_id=user_id,
                                          wallet_id=wallet_id,
                                          category_id=category_id,
@@ -271,8 +271,11 @@ def get_wallets(request: Request, db: Session = Depends(get_db)):
 def add_wallet(wallet: Annotated[str, Form()],
                description: Annotated[str, Form()],
                db: Session = Depends(get_db)):
-    crud.create_wallet(db=db, user_id=user_id, wallet_name=wallet, description=description)
-    return RedirectResponse(url="/wallets", status_code=303)
+    try:
+        crud.create_wallet(db=db, user_id=user_id, wallet_name=wallet, description=description)
+        return RedirectResponse(url="/wallets", status_code=303)
+    except ValueError:
+        return ValueError("Invalid wallet name", status_code=400)
 
 @app.post("/wallets/update")
 def update_wallet(wallet_id: Annotated[int, Form()],
@@ -298,3 +301,54 @@ def delete_wallet(request: deleteWalletRequest,
         return RedirectResponse(url="/wallets", status_code=303)
     except ValueError:
         return ValueError("Invalid wallet id", status_code=400)
+
+### Categories Routes
+@app.get('/categories')
+def get_categories(request: Request, db: Session = Depends(get_db)):
+    username = crud.get_user(db, user_id=user_id).username
+    categories = crud.get_categories(db, user_id=user_id)
+    transaction_types = crud.get_transaction_types(db, ie=True)
+    return templates.TemplateResponse('categories.html', 
+                                      {'request': request,
+                                       'username': username,
+                                       'categories': categories,
+                                       'transaction_types': transaction_types})
+
+@app.post("/categories/create")
+def add_category(category: Annotated[str, Form()],
+                 transaction_type_id: Annotated[str, Form()],
+                  description: Annotated[str, Form()],
+                  db: Session = Depends(get_db)):
+    try:
+        crud.create_category(db=db, user_id=user_id, transaction_type_id=transaction_type_id, category_name=category, description=description)
+        return RedirectResponse(url="/categories", status_code=303)
+    except ValueError:
+        return ValueError("Invalid category name", status_code=400)
+
+@app.post("/categories/update")
+def update_category(category_id: Annotated[int, Form()],
+                    category: Annotated[str, Form()],
+                    transaction_type_id: Annotated[str, Form()],
+                    description: Annotated[str, Form()],    
+                    db: Session = Depends(get_db)):
+    try:
+        crud.update_category(db=db, category_id=category_id, transaction_type_id=transaction_type_id, category_name=category, description=description)
+        return RedirectResponse(url="/categories", status_code=303)
+    except ValueError:
+        return ValueError("Invalid category id", status_code=400)
+
+### User Routes
+@app.get('/login')
+def get_login(request: Request):
+    return templates.TemplateResponse('login.html', {'request': request})
+
+# @app.post('/login')
+# def login(request: Request, db: Session = Depends(get_db)):
+#     form = LoginForm(request)
+#     if not form.validate():
+#         return templates.TemplateResponse('login.html', {'request': request, 'form': form})
+
+#     user = crud.get_user_by_username(db, username=form.username.data)
+#     if not user:
+#         return templates.TemplateResponse('login.html', {'request': request, 'form': form, 'error': "Invalid username"})
+

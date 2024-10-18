@@ -477,7 +477,7 @@
                                         <div class="form-group form-group-default">
                                             <label>Type</label>
                                             <select id="updateType" name="selected_type" class="form-control" required>
-                                                <option disabled selected>type</option>
+                                                <option disabled selected>select type</option>
                                                 {% for type in all_options.transaction_types %}
                                                     <option value="{{ type.id }}">{{ type.name }}</option>
                                                 {% endfor %}
@@ -488,7 +488,7 @@
                                         <div class="form-group form-group-default">
                                             <label>Category</label>
                                             <select id="updateCategory" name="category" class="form-control" required>
-                                                <option disabled selected>category</option>
+                                                <option disabled selected>select category</option>
                                                 {% for category in all_options.categories %}
                                                     <option value="{{ category.id }}">{{ category.name }}</option>
                                                 {% endfor %}
@@ -499,7 +499,7 @@
                                         <div class="form-group form-group-default">
                                             <label>Wallet</label>
                                             <select id="updateWallet" name="wallet" class="form-control" required>
-                                                <option disabled selected>wallet</option>
+                                                <option disabled selected>select wallet</option>
                                                 {% for wallet in all_options.wallets %}
                                                     <option value="{{ wallet.id }}">{{ wallet.name }}</option>
                                                 {% endfor %}

@@ -38,8 +38,6 @@
     <link rel="stylesheet" href="static/css/plugins.min.css" />
     <link rel="stylesheet" href="static/css/kaiadmin.min.css" />
 
-    <!-- CSS Just for demo purpose, don't include it in your project -->
-    <link rel="stylesheet" href="static/css/demo.css" />
   </head>
   <body>
     <div class="wrapper">
@@ -73,6 +71,13 @@
         <div class="sidebar-wrapper scrollbar scrollbar-inner">
           <div class="sidebar-content">
             <ul class="nav nav-secondary">
+              <!-- REPORTS SECTION -->
+              <li class="nav-section">
+                <span class="sidebar-mini-icon">
+                    <i class="fa fa-ellipsis-h"></i>
+                </span>
+                <h4 class="text-section">REPORTS</h4>
+              </li>
               <li class="nav-item {% if request.path == '/asset' %}active{% endif %}">
                   <a href="/asset">
                       <i class="fas fa-home"></i>
