@@ -18,7 +18,7 @@ def get_users(db: Session):
 def update_user(db: Session, user_id: int, username: str = None, is_active: bool = True):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if db_user is None:
-        return None
+        return ValueError("User not found")
     
     if username is not None:
         db_user.username = username
@@ -32,7 +32,7 @@ def update_user(db: Session, user_id: int, username: str = None, is_active: bool
 def delete_user(db: Session, user_id: int):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if db_user is None:
-        return None
+        return ValueError("User not found")
     
     db.delete(db_user)
     db.commit()
@@ -46,20 +46,25 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 ### Wallet functions
-def get_wallets(db: Session, user_id: int):
+def get_wallets(db: Session, user_id: int, liability=None):
+    if liability is not None:
+        return db.query(models.Wallet).filter(and_(models.Wallet.user_id == user_id, models.Wallet.liability == liability)).all()
+    
     return db.query(models.Wallet).filter(models.Wallet.user_id == user_id).all()
 
-def create_wallet(db: Session, user_id: int, wallet_name: str, description: str = None):
-    db_wallet = models.Wallet(user_id=user_id, wallet_name=wallet_name, description=description)
+def get_wallet_by_name(db: Session, user_id: int, wallet_name: str):
+    return db.query(models.Wallet).filter(and_(models.Wallet.user_id == user_id, models.Wallet.wallet_name == wallet_name)).first()
+def create_wallet(db: Session, user_id: int, wallet_name: str, liability: int = 0, description: str = None):
+    db_wallet = models.Wallet(user_id=user_id, wallet_name=wallet_name, description=description, liability=liability)
     db.add(db_wallet)
     db.commit()
     db.refresh(db_wallet)
     return db_wallet
 
-def update_wallet(db: Session, wallet_id: int, wallet_name: str = None, description: str = None):
-    db_wallet = db.query(models.Wallet).filter(models.Wallet.id==wallet_id)
+def update_wallet(db: Session, wallet_id: int, wallet_name: str = None, description: str = None, liability: int = 0):
+    db_wallet = db.query(models.Wallet).filter(models.Wallet.id==wallet_id).first()
     if db_wallet is None:
-        return None
+        return ValueError("Wallet not found")
     if wallet_name is not None:
         db_wallet.wallet_name = wallet_name
     if description is not None:
@@ -69,9 +74,9 @@ def update_wallet(db: Session, wallet_id: int, wallet_name: str = None, descript
     return db_wallet
 
 def delete_wallet(db: Session, wallet_id: int):
-    db_wallet = db.query(models.Wallet).filter(models.Wallet.id==wallet_id)
+    db_wallet = db.query(models.Wallet).filter(models.Wallet.id==wallet_id).first()
     if db_wallet is None:
-        return None
+        return ValueError("Wallet not found")
     db.delete(db_wallet)
     db.commit()
     return db_wallet
@@ -109,7 +114,7 @@ def update_category(db: Session,
     db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
 
     if db_category is None:
-        return None
+        return ValueError("Category not found")
 
     # Update the fields if new values are provided
     if user_id is not None:
@@ -127,9 +132,9 @@ def update_category(db: Session,
     return db_category
 
 def delete_category(db: Session, category_id: int):
-    db_category = db.query(models.Category).filter(models.Category.id == category_id)
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
     if db_category is None:
-        return None
+        return ValueError("Category not found")
     db.delete(db_category)
     db.commit()
     return db_category
@@ -193,7 +198,12 @@ def update_transaction(db: Session,
     db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
 
     if db_transaction is None:
-        return None  # or raise an exception
+        return ValueError("Transaction not found")
+
+    if transaction_type_id is not None and category_id is not None:
+        db_category = db.query(models.Category).filter(models.Category.id == category_id, models.Category.transaction_type_id == transaction_type_id).first()
+        if db_category is None:
+            raise ValueError("Invalid category or transaction type")
 
     # Update the fields if new values are provided
     if user_id is not None:
@@ -217,20 +227,20 @@ def update_transaction(db: Session,
     return db_transaction
 
 def delete_transaction(db: Session, transaction_id: int):
-    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id)
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
     if db_transaction is None:
-        return None
+        return ValueError("Transaction not found")
     db.delete(db_transaction)
     db.commit()
     return db_transaction
 
 def new_user_setup(db: Session,
-                   wallet_list: list, # {wallet_name: description}
-                   category_list: list, # {[category_name, transaction_type_id, description]}
+                   wallet_list: list,
+                   category_list: list,
                    user_id: int):
     # Setup intial wallets
     for wallet in wallet_list:
-        db_wallet = models.Wallet(user_id=user_id, wallet_name=wallet[0], description=wallet[1])
+        db_wallet = models.Wallet(user_id=user_id, wallet_name=wallet[0], description=wallet[1], liability=wallet[2])
         db.add(db_wallet)
     
     # Setup intial categories
@@ -248,4 +258,9 @@ def new_user_setup(db: Session,
     return True
 
 def get_transaction_types(db: Session):
+    # if len(id_list) > 0:
+    #     # Log the id_list
+    #     print(f"Fetching transaction types for IDs: {id_list}")
+    #     return db.query(models.TransactionType).filter(models.TransactionType.id.in_(id_list)).all()
+
     return db.query(models.TransactionType).all()

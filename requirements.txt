@@ -12,3 +12,4 @@ SQLAlchemy
 werkzeug
 matplotlib
 plotly
+ipykernel

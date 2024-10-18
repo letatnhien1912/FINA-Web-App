@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Form, HTTPException, Depends, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -87,35 +87,43 @@ templates.env.filters['format_date'] = format_date
 templates.env.filters['format_money'] = format_money
 
 user_id = 1
+
+### Transactions Routes
 @app.get("/transactions", response_class=HTMLResponse, name="transactions")
 def get_transaction_page(request: Request, db: Session = Depends(get_db),
                          page = 1,
-                         category_id: Optional[int] = None,
-                         wallet_id: Optional[int] = None,
-                         transaction_type_id: Optional[int] = None,
-                         date_from: Optional[str] = None,
-                         date_to: Optional[str] = None):
+                         transaction_type_id: Optional[str] = None,
+                         category_id: Optional[str] = None,
+                         wallet_id: Optional[str] = None,
+                         startdate: Optional[str] = None,
+                         enddate: Optional[str] = None,
+                         error: Optional[str] = None):
     
     # change all id input to int
     if category_id: category_id = int(category_id)
     if wallet_id: wallet_id = int(wallet_id)
     if transaction_type_id: transaction_type_id = int(transaction_type_id)
     page = int(page)
-
+    
     # change date input to datetime
-    if date_from: date_from = datetime.fromisoformat(date_from)
-    if date_to: date_to = datetime.fromisoformat(date_to)
+    if startdate: startdate = datetime.fromisoformat(startdate)
+    if enddate: enddate = datetime.fromisoformat(enddate)
 
     username = crud.get_user(db, user_id=user_id).username
     categories = crud.get_categories(db, user_id=user_id)
-    wallets = crud.get_wallets(db, user_id=user_id)
+    wallets = crud.get_wallets(db, user_id=user_id, liability=0)
+    debtors = crud.get_wallets(db, user_id=user_id, liability=1)
     transaction_types = crud.get_transaction_types(db)
     transactions = crud.get_transactions(db, user_id=user_id,
                                          wallet_id=wallet_id,
                                          category_id=category_id,
                                          transaction_type_id=transaction_type_id,
-                                         transaction_date_from=date_from,
-                                         transaction_date_to=date_to)
+                                         transaction_date_from=startdate,
+                                         transaction_date_to=enddate)
+
+    # Handle case no records
+    if len(transactions) == 0:
+        return get_transaction_page(request, db, error='No records found')
 
     # Pagination
     pagelimit = 10
@@ -126,14 +134,167 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
     fromtrans = (page - 1) * pagelimit
     totrans = page * pagelimit
     transactions_offset = transactions[fromtrans : totrans]
-    pagination = {'page': page, 'pages': pages, 'total': len(transactions), 'fromtrans': fromtrans, 'totrans': totrans}
+    pagination = {'page': page, 'pages': pages, 'total': len(transactions), 'fromtrans': fromtrans + 1, 'totrans': totrans}
     
-    unique_options = {'categories': [{id: {x.id: x.category_name for x in categories}[id]} for id in set(transaction.category_id for transaction in transactions)],
-                      'wallets': [{id: {x.id: x.wallet_name for x in wallets}[id]} for id in set(transaction.wallet_id for transaction in transactions)],
-                      'transaction_types': [{id: {x.id: x.transaction_type_name for x in transaction_types}[id]} for id in set(transaction.transaction_type_id for transaction in transactions)]}
+    all_options = {'categories': [{'id': category.id, 'name': category.category_name} for category in categories],
+                   'wallets': [{'id': wallet.id, 'name': wallet.wallet_name} for wallet in wallets],
+                   'transaction_types': [{'id': transaction_type.id, 'name': transaction_type.transaction_type_name} for transaction_type in transaction_types],
+                   'debtors': [{'id': debtor.id, 'name': debtor.wallet_name} for debtor in debtors]}
+
+    filter_options = {'categories': [{x.id: x.category_name} for x in categories if x.id in set(transaction.category_id for transaction in transactions)],
+                  'wallets': [{x.id: x.wallet_name} for x in wallets if x.id in set(transaction.wallet_id for transaction in transactions)],
+                  'transaction_types': [{x.id: x.transaction_type_name} for x in transaction_types if x.id in set(transaction.transaction_type_id for transaction in transactions)]}
+
     return templates.TemplateResponse('transactions.html', 
                                       {'request': request,
                                        'username': username,
                                        'transactions': transactions_offset,
-                                       'options': unique_options,
-                                       'pagination': pagination})
+                                       'options': filter_options,
+                                       'all_options': all_options,
+                                       'pagination': pagination,
+                                       'error': error})
+
+@app.post("/transactions/create")
+def add_transaction(selected_date: Annotated[str, Form()],
+                    selected_type: Annotated[str, Form()],
+                    category: Annotated[str, Form()],
+                    wallet: Annotated[str, Form()],
+                    amount: Annotated[float, Form()],
+                    description: Annotated[str, Form()],
+                    db: Session = Depends(get_db)):
+    selected_date = datetime.fromisoformat(selected_date).date()
+    wallet_id = int(wallet)
+    category_id = int(category)
+    transaction_type_id = int(selected_type)
+    crud.create_transaction(db=db,
+                            user_id=user_id,
+                            wallet_id=wallet_id,
+                            category_id=category_id,
+                            transaction_type_id=transaction_type_id,
+                            amount=amount,
+                            transaction_date=selected_date,
+                            description=description)
+    return RedirectResponse(url="/transactions", status_code=303)
+
+@app.post("/transactions/create/transfer")
+def add_debt(selected_date: Annotated[str, Form()],
+                    category: Annotated[int, Form()],
+                    selected_type: Annotated[int, Form()],
+                    wallet: Annotated[str, Form()],
+                    wallet_to: Annotated[str, Form()],
+                    amount: Annotated[float, Form()],
+                    description: Annotated[str, Form()],
+                    db: Session = Depends(get_db)):
+    selected_date = datetime.fromisoformat(selected_date).date()
+    wallet_from = int(wallet)
+    transaction_type_id = int(selected_type)
+
+    # Create debt wallet if it doesn't exist
+    if transaction_type_id==4:
+        wallet_to_first = crud.get_wallet_by_name(db=db, user_id=user_id, wallet_name=wallet_to)
+        if not wallet_to_first:
+            crud.create_wallet(db=db, user_id=user_id, wallet_name=wallet_to, liability=1)
+            wallet_to_first = crud.get_wallet_by_name(db=db, user_id=user_id, wallet_name=wallet_to)
+
+    print(wallet_to_first.id, wallet_to_first.wallet_name)
+    # Create 2 transactions for the debt
+    ## Create first transaction
+    crud.create_transaction(db=db,
+                            user_id=user_id,
+                            wallet_id=wallet_from,
+                            category_id=None,
+                            transaction_type_id=transaction_type_id,
+                            amount=amount if category == 0 else -amount,
+                            transaction_date=selected_date,
+                            description=description)
+    ## Create second transaction
+    crud.create_transaction(db=db,
+                            user_id=user_id,
+                            wallet_id=wallet_to_first.id,
+                            category_id=None,
+                            transaction_type_id=transaction_type_id,
+                            amount=-amount if category == 0 else amount,
+                            transaction_date=selected_date,
+                            description=description)
+
+    return RedirectResponse(url="/transactions", status_code=303)
+
+@app.post("/transactions/update")
+def update_transaction(transaction_id: Annotated[int, Form()],
+                    selected_date: Annotated[str, Form()],
+                    selected_type: Annotated[str, Form()],
+                    category: Annotated[str, Form()],
+                    wallet: Annotated[str, Form()],
+                    amount: Annotated[float, Form()],
+                    description: Annotated[str, Form()],
+                    db: Session = Depends(get_db)):
+    
+    selected_date = datetime.fromisoformat(selected_date).date()
+    wallet_id = int(wallet)
+    category_id = int(category)
+    transaction_type_id = int(selected_type)
+
+    try:
+        crud.update_transaction(db = db,
+                                transaction_id = transaction_id,
+                                wallet_id = wallet_id,
+                                category_id = category_id,
+                                transaction_type_id = transaction_type_id,
+                                amount = amount,
+                                transaction_date = selected_date,
+                                description = description)
+
+        return RedirectResponse(url="/transactions", status_code=303)
+    except ValueError:
+        return ValueError("Invalid category or transaction type", status_code=400)
+
+class deleteTransactionRequest(BaseModel):
+    transaction_id: int
+@app.post("/transactions/delete")
+def delete_transaction(request: deleteTransactionRequest, db: Session = Depends(get_db)):
+    crud.delete_transaction(db=db, transaction_id=request.transaction_id)
+    return RedirectResponse(url="/transactions", status_code=303)
+
+### Wallets Routes
+@app.get('/wallets')
+def get_wallets(request: Request, db: Session = Depends(get_db)):
+    username = crud.get_user(db, user_id=user_id).username
+    wallets = crud.get_wallets(db, user_id=user_id, liability=0)
+    debts = crud.get_wallets(db, user_id=user_id, liability=1)
+    return templates.TemplateResponse('wallets.html', 
+                                      {'request': request,
+                                       'username': username,
+                                       'wallets': wallets,
+                                       'debts': debts})
+
+@app.post("/wallets/create")
+def add_wallet(wallet: Annotated[str, Form()],
+               description: Annotated[str, Form()],
+               db: Session = Depends(get_db)):
+    crud.create_wallet(db=db, user_id=user_id, wallet_name=wallet, description=description)
+    return RedirectResponse(url="/wallets", status_code=303)
+
+@app.post("/wallets/update")
+def update_wallet(wallet_id: Annotated[int, Form()],
+                  wallet: Annotated[str, Form()],
+                  description: Annotated[str, Form()],
+                  db: Session = Depends(get_db)):
+    try:
+        crud.update_wallet(db=db,
+                           wallet_id=wallet_id,
+                           wallet_name=wallet,
+                           description=description)
+        return RedirectResponse(url="/wallets", status_code=303)
+    except ValueError:
+        return ValueError("Invalid wallet id", status_code=400)
+
+class deleteWalletRequest(BaseModel):
+    wallet_id: int
+@app.post("/wallets/delete")
+def delete_wallet(request: deleteWalletRequest,
+                  db: Session = Depends(get_db)):
+    try:
+        crud.delete_wallet(db=db, wallet_id=request.wallet_id)
+        return RedirectResponse(url="/wallets", status_code=303)
+    except ValueError:
+        return ValueError("Invalid wallet id", status_code=400)

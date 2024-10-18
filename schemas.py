@@ -6,6 +6,7 @@ from typing import Optional
 class WalletBase(BaseModel):
     wallet_name: str
     description: str
+    liability: int
 
 class Wallet(WalletBase):
     id: int
@@ -75,3 +76,4 @@ class User(UserBase):
 
     class Config:
         from_attributes = True
+

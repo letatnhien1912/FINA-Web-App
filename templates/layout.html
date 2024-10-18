@@ -85,11 +85,13 @@
                       <p>Expense Dashboard</p>
                   </a>
               </li>
+
+              <!-- DATABASE SECTION -->
               <li class="nav-section">
                   <span class="sidebar-mini-icon">
                       <i class="fa fa-ellipsis-h"></i>
                   </span>
-                  <h4 class="text-section">PAGES</h4>
+                  <h4 class="text-section">DATABASE</h4>
               </li>
               <li class="nav-item {% if request.path == '/budget' %}active{% endif %}">
                   <a href="/budget">
@@ -103,6 +105,27 @@
                       <p>Transactions</p>
                   </a>
               </li>
+              
+              <!-- SETTING SECTION -->
+              <li class="nav-section">
+                <span class="sidebar-mini-icon">
+                    <i class="fa fa-ellipsis-h"></i>
+                </span>
+                <h4 class="text-section">SETTINGS</h4>
+              </li>
+              <li class="nav-item {% if request.path == '/wallets' %}active{% endif %}">
+                  <a href="/wallets">
+                      <i class="fas fa-wallet"></i>
+                      <p>Wallets</p>
+                  </a>
+              </li>
+              <li class="nav-item {% if request.path == '/categories' %}active{% endif %}">
+                  <a href="/categories">
+                      <i class="fas fa-book"></i>
+                      <p>Categories</p>
+                  </a>
+              </li>
+
             </ul>
           </div>
         </div>

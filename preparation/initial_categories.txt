@@ -1,5 +1,5 @@
 [['salary', 2, 'Income from main jobs'],
- ['loan', 2, 'Cash in from a loan'],
+ ['loan', 2, 'Cash inflow from a loan'],
  ['debt collection', 2, 'Cash from collected debt'],
  ['interest', 2, 'Interest from financial assets (stocks, bonds, funds, savings)'],
  ['side job payment', 2, 'Income from side jobs'],
