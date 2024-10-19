@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 import models, schemas
@@ -10,23 +10,47 @@ def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
 def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+    return db.query(models.User).filter(and_(models.User.username == username, models.User.is_active == 1)).first()
+
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(and_(models.User.email == email, models.User.is_active == 1)).first()
+
+def get_user_by_id(db: Session, user_id: int):
+    return db.query(models.User).filter(and_(models.User.id == user_id, models.User.is_active == 1)).first()
 
 def get_users(db: Session):
     return db.query(models.User).all()
 
-def update_user(db: Session, user_id: int, username: str = None, is_active: bool = True):
+def update_user(db: Session,
+                user_id: int,
+                username: str = None,
+                fullname: str = None,
+                email: str = None,
+                is_active: bool = True):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if db_user is None:
         return ValueError("User not found")
     
+    if email is not None:
+        db_user.email = email
     if username is not None:
         db_user.username = username
-    if username is not None:
+    if fullname is not None:
+        db_user.fullname = fullname
+    if is_active is not None:
         db_user.is_active = is_active
     
     db.commit()
     db.refresh(db_user)
+    return db_user
+
+def inactive_user(db: Session, user_id: int):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user is None:
+        return ValueError("User not found")
+    
+    db_user.is_active = 0
+    db.commit()
     return db_user
 
 def delete_user(db: Session, user_id: int):
@@ -40,11 +64,31 @@ def delete_user(db: Session, user_id: int):
 
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = generate_password_hash(user.password)
-    db_user = models.User(username=user.username, hashed_password=hashed_password)
+    db_user = models.User(username=user.username,
+                          fullname=user.fullname,
+                          email=user.email,
+                          hashed_password=hashed_password,
+                          is_active=1)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def verify_password(db: Session, user, password: str):
+    if not user.hashed_password:
+        return False
+    return check_password_hash(user.hashed_password, password)
+
+def reset_password(db: Session, user_id: int, new_password: str):
+    hashed_password = generate_password_hash(new_password)
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user is None:
+        return ValueError("User not found")
+    db_user.hashed_password = hashed_password
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
 ### Wallet functions
 def get_wallets(db: Session, user_id: int, liability=None):
     if liability is not None:
@@ -55,12 +99,16 @@ def get_wallets(db: Session, user_id: int, liability=None):
 def get_wallet_by_name(db: Session, user_id: int, wallet_name: str):
     return db.query(models.Wallet).filter(and_(models.Wallet.user_id == user_id, models.Wallet.wallet_name == wallet_name)).first()
 
-def create_wallet(db: Session, user_id: int, wallet_name: str, liability: int = 0, description: str = None):
+def create_wallet(db: Session, user_id: int, wallet_name: str, liability: int = 0, description: str = None, initial_balance: float = 0):
     existing_wallet = db.query(models.Wallet).filter(and_(models.Wallet.user_id == user_id, models.Wallet.wallet_name == wallet_name)).first()
     if existing_wallet:
         return ValueError("Wallet exists")
     
-    db_wallet = models.Wallet(user_id=user_id, wallet_name=wallet_name, description=description, liability=liability)
+    db_wallet = models.Wallet(user_id=user_id,
+                            wallet_name=wallet_name,
+                            description=description,
+                            liability=liability,
+                            initial_balance=initial_balance)
     db.add(db_wallet)
     db.commit()
     db.refresh(db_wallet)

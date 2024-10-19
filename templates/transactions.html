@@ -22,7 +22,7 @@
                     <button class="btn btn-danger btn-sm btn-round ms-auto" data-bs-toggle="modal" data-bs-target="#addDebtModal"
                         id="addDebtButton">
                         <i class="fa fa-plus"></i>
-                        Add/Pay Debt
+                        Add Debt
                     </button>
                     <button class="btn btn-success btn-sm btn-round ms-auto" data-bs-toggle="modal" data-bs-target="#addTransferModal"
                         id="addTransferButton">
@@ -66,7 +66,7 @@
                         <div class="form-group form-group-default">
                           <label>Type</label>
                           <select id="addType" name="selected_type" class="form-control" required>
-                            <option disabled selected>type</option>
+                            <option value="" disabled selected hidden>select type</option>
                             {% for type in all_options.transaction_types %}
                                 <option value="{{ type.id }}">{{ type.name }}</option>
                             {% endfor %}
@@ -77,7 +77,7 @@
                         <div class="form-group form-group-default">
                           <label>Category</label>
                           <select id="addCategory" name="category" class="form-control" required>
-                            <option disabled selected>category</option>
+                            <option value="" disabled selected hidden>select category</option>
                             {% for category in all_options.categories %}
                                 <option value="{{ category.id }}">{{ category.name }}</option>
                             {% endfor %}
@@ -88,7 +88,7 @@
                         <div class="form-group form-group-default">
                           <label>Wallet</label>
                           <select id="addWallet" name="wallet" class="form-control" required>
-                            <option disabled selected>wallet</option>
+                            <option value="" disabled selected hidden>select wallet</option>
                             {% for wallet in all_options.wallets %}
                                 <option value="{{ wallet.id }}">{{ wallet.name }}</option>
                             {% endfor %}
@@ -161,7 +161,7 @@
                         <div class="form-group form-group-default">
                           <label>Category</label>
                           <select id="addDebtCategory" name="category" class="form-control" required>
-                            <option value="" selected disabled hidden>category</option>
+                            <option value="" selected disabled hidden>select category</option>
                             
                             <option value=0>Borrow/Receive from others</option>
                             <option value=1>Pay/Lend to others</option>
@@ -173,7 +173,7 @@
                         <div class="form-group form-group-default">
                           <label>Wallet</label>
                           <select id="addWallet" name="wallet" class="form-control" required>
-                            <option value="" selected disabled hidden>wallet used</option>
+                            <option value="" selected disabled hidden>select wallet used</option>
                             {% for wallet in all_options.wallets %}
                                 <option value="{{ wallet.id }}">{{ wallet.name }}</option>
                             {% endfor %}
@@ -411,6 +411,7 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% if transactions %}
                         {% for transaction in transactions %}
                         <tr>
                             <td>{{ transaction.transaction_date|format_date }}</td>
@@ -440,6 +441,7 @@
                             </td>
                         </tr>
                         {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -535,6 +537,7 @@
             </div>
             
             <!-- Pagniation -->
+             {% if pagination %}
             <div class="row">
                 {% set start_page = 1 if pagination.page < 3 else pagination.page - 2 %}
                 {% set end_page = start_page + 4 if start_page + 4 <= pagination.pages else pagination.pages %}
@@ -563,6 +566,8 @@
                     </ul>
                 </div>
             </div>
+            {% endif %}
+
         </div>
         
     </div>

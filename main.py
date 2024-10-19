@@ -35,28 +35,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Initialize Jinja2Templates with the templates directory
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/")
-async def home():
-    return templates.TemplateResponse('asset.html')
+@app.get("/", response_class=HTMLResponse)
+async def read_home(request: Request, db: Session = Depends(get_db)):
 
-with open('preparation/initial_categories.txt', 'r') as category_file:
-    initial_categories_txt = category_file.read()
-initial_categories = ast.literal_eval(initial_categories_txt)
+    user_id = request.cookies.get("user_id")
+    if not user_id:
+        return templates.TemplateResponse("login.html", {"request": request})
 
-with open('preparation/initial_wallets.txt', 'r') as wallet_file:
-    initial_wallets_txt = wallet_file.read()
-initial_wallets = ast.literal_eval(initial_wallets_txt)
-
-@app.post("/users/create", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_username(db, username=user.username)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    new_user = crud.create_user(db=db, user=user)
-    crud.new_user_setup(db=db, wallet_list=initial_wallets, category_list=initial_categories, user_id=new_user.id)
-
-    return new_user
+    return RedirectResponse(url="/transactions", status_code=303)
 
 @app.post("/users/update", response_model=schemas.User)
 def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
@@ -75,7 +61,7 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
 
 @app.post("/users/delete", response_model=schemas.User)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = crud.delete_user(db=db, user_id=user_id)
+    db_user = crud.inactive_user(db=db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
@@ -86,11 +72,9 @@ templates.env.filters['format_percentage'] = format_percentage
 templates.env.filters['format_date'] = format_date
 templates.env.filters['format_money'] = format_money
 
-user_id = 1
-
 ### Transactions Routes
 @app.get("/transactions", response_class=HTMLResponse, name="transactions")
-def get_transaction_page(request: Request, db: Session = Depends(get_db),
+async def get_transaction_page(request: Request, db: Session = Depends(get_db),
                          page = 1,
                          transaction_type_id: Optional[str] = None,
                          category_id: Optional[str] = None,
@@ -99,6 +83,8 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
                          enddate: Optional[str] = None,
                          error: Optional[str] = None):
     
+    user_id = request.cookies.get("user_id")
+
     # change all id input to int
     if category_id: category_id = int(category_id)
     if wallet_id: wallet_id = int(wallet_id)
@@ -109,7 +95,8 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
     if startdate: startdate = datetime.fromisoformat(startdate)
     if enddate: enddate = datetime.fromisoformat(enddate)
 
-    username = crud.get_user(db, user_id=user_id).username
+    user = crud.get_user(db, user_id=user_id)
+    username = user.fullname
     categories = crud.get_categories(db, user_id=user_id)
     wallets = crud.get_wallets(db, user_id=user_id, liability=0)
     debtors = crud.get_wallets(db, user_id=user_id, liability=1)
@@ -120,11 +107,27 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
                                          transaction_type_id=transaction_type_id,
                                          transaction_date_from=startdate,
                                          transaction_date_to=enddate)
+    
+    all_options = {'categories': [{'id': category.id, 'name': category.category_name} for category in categories],
+                   'wallets': [{'id': wallet.id, 'name': wallet.wallet_name} for wallet in wallets],
+                   'transaction_types': [{'id': transaction_type.id, 'name': transaction_type.transaction_type_name} for transaction_type in transaction_types],
+                   'debtors': [] if len(debtors) == 0 else [{'id': debtor.id, 'name': debtor.wallet_name} for debtor in debtors]}
 
+    filter_options = {'categories': [{x.id: x.category_name} for x in categories if x.id in set(transaction.category_id for transaction in transactions)],
+                'wallets': [{x.id: x.wallet_name} for x in wallets if x.id in set(transaction.wallet_id for transaction in transactions)],
+                'transaction_types': [{x.id: x.transaction_type_name} for x in transaction_types if x.id in set(transaction.transaction_type_id for transaction in transactions)]}
+    
     # Handle case no records
     if len(transactions) == 0:
-        return get_transaction_page(request, db, error='No records found')
-
+        return templates.TemplateResponse('transactions.html', 
+                                      {'request': request,
+                                       'username': username,
+                                       'transactions': None,
+                                       'options': filter_options,
+                                       'all_options': all_options,
+                                       'pagination': None,
+                                       'error': "No records found"})
+    
     # Pagination
     pagelimit = 10
     pages = math.ceil(len(transactions) / pagelimit)
@@ -136,15 +139,6 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
     transactions_offset = transactions[fromtrans : totrans]
     pagination = {'page': page, 'pages': pages, 'total': len(transactions), 'fromtrans': fromtrans + 1, 'totrans': totrans}
     
-    all_options = {'categories': [{'id': category.id, 'name': category.category_name} for category in categories],
-                   'wallets': [{'id': wallet.id, 'name': wallet.wallet_name} for wallet in wallets],
-                   'transaction_types': [{'id': transaction_type.id, 'name': transaction_type.transaction_type_name} for transaction_type in transaction_types],
-                   'debtors': [{'id': debtor.id, 'name': debtor.wallet_name} for debtor in debtors]}
-
-    filter_options = {'categories': [{x.id: x.category_name} for x in categories if x.id in set(transaction.category_id for transaction in transactions)],
-                  'wallets': [{x.id: x.wallet_name} for x in wallets if x.id in set(transaction.wallet_id for transaction in transactions)],
-                  'transaction_types': [{x.id: x.transaction_type_name} for x in transaction_types if x.id in set(transaction.transaction_type_id for transaction in transactions)]}
-
     return templates.TemplateResponse('transactions.html', 
                                       {'request': request,
                                        'username': username,
@@ -155,13 +149,15 @@ def get_transaction_page(request: Request, db: Session = Depends(get_db),
                                        'error': error})
 
 @app.post("/transactions/create")
-def add_transaction(selected_date: Annotated[str, Form()],
+async def add_transaction(request: Request,
+                    selected_date: Annotated[str, Form()],
                     selected_type: Annotated[str, Form()],
                     category: Annotated[str, Form()],
                     wallet: Annotated[str, Form()],
                     amount: Annotated[float, Form()],
                     description: Annotated[str, Form()],
                     db: Session = Depends(get_db)):
+    user_id = request.cookies.get("user_id")
     selected_date = datetime.fromisoformat(selected_date).date()
     wallet_id = int(wallet)
     category_id = int(category)
@@ -177,7 +173,8 @@ def add_transaction(selected_date: Annotated[str, Form()],
     return RedirectResponse(url="/transactions", status_code=303)
 
 @app.post("/transactions/create/transfer")
-def add_debt(selected_date: Annotated[str, Form()],
+async def add_debt(request: Request,
+                    selected_date: Annotated[str, Form()],
                     category: Annotated[int, Form()],
                     selected_type: Annotated[int, Form()],
                     wallet: Annotated[str, Form()],
@@ -185,6 +182,7 @@ def add_debt(selected_date: Annotated[str, Form()],
                     amount: Annotated[float, Form()],
                     description: Annotated[str, Form()],
                     db: Session = Depends(get_db)):
+    user_id = request.cookies.get("user_id")
     selected_date = datetime.fromisoformat(selected_date).date()
     wallet_from = int(wallet)
     transaction_type_id = int(selected_type)
@@ -220,7 +218,8 @@ def add_debt(selected_date: Annotated[str, Form()],
     return RedirectResponse(url="/transactions", status_code=303)
 
 @app.post("/transactions/update")
-def update_transaction(transaction_id: Annotated[int, Form()],
+async def update_transaction(request: Request,
+                    transaction_id: Annotated[int, Form()],
                     selected_date: Annotated[str, Form()],
                     selected_type: Annotated[str, Form()],
                     category: Annotated[str, Form()],
@@ -228,7 +227,7 @@ def update_transaction(transaction_id: Annotated[int, Form()],
                     amount: Annotated[float, Form()],
                     description: Annotated[str, Form()],
                     db: Session = Depends(get_db)):
-    
+    user_id = request.cookies.get("user_id")
     selected_date = datetime.fromisoformat(selected_date).date()
     wallet_id = int(wallet)
     category_id = int(category)
@@ -251,14 +250,15 @@ def update_transaction(transaction_id: Annotated[int, Form()],
 class deleteTransactionRequest(BaseModel):
     transaction_id: int
 @app.post("/transactions/delete")
-def delete_transaction(request: deleteTransactionRequest, db: Session = Depends(get_db)):
+async def delete_transaction(request: deleteTransactionRequest, db: Session = Depends(get_db)):
     crud.delete_transaction(db=db, transaction_id=request.transaction_id)
     return RedirectResponse(url="/transactions", status_code=303)
 
 ### Wallets Routes
 @app.get('/wallets')
-def get_wallets(request: Request, db: Session = Depends(get_db)):
-    username = crud.get_user(db, user_id=user_id).username
+async def get_wallets(request: Request, db: Session = Depends(get_db)):
+    user_id = request.cookies.get("user_id")
+    username = crud.get_user(db, user_id=user_id).fullname
     wallets = crud.get_wallets(db, user_id=user_id, liability=0)
     debts = crud.get_wallets(db, user_id=user_id, liability=1)
     return templates.TemplateResponse('wallets.html', 
@@ -268,9 +268,11 @@ def get_wallets(request: Request, db: Session = Depends(get_db)):
                                        'debts': debts})
 
 @app.post("/wallets/create")
-def add_wallet(wallet: Annotated[str, Form()],
+async def add_wallet(request: Request,
+                wallet: Annotated[str, Form()],
                description: Annotated[str, Form()],
                db: Session = Depends(get_db)):
+    user_id = request.cookies.get("user_id")
     try:
         crud.create_wallet(db=db, user_id=user_id, wallet_name=wallet, description=description)
         return RedirectResponse(url="/wallets", status_code=303)
@@ -278,7 +280,7 @@ def add_wallet(wallet: Annotated[str, Form()],
         return ValueError("Invalid wallet name", status_code=400)
 
 @app.post("/wallets/update")
-def update_wallet(wallet_id: Annotated[int, Form()],
+async def update_wallet(wallet_id: Annotated[int, Form()],
                   wallet: Annotated[str, Form()],
                   description: Annotated[str, Form()],
                   db: Session = Depends(get_db)):
@@ -294,7 +296,7 @@ def update_wallet(wallet_id: Annotated[int, Form()],
 class deleteWalletRequest(BaseModel):
     wallet_id: int
 @app.post("/wallets/delete")
-def delete_wallet(request: deleteWalletRequest,
+async def delete_wallet(request: deleteWalletRequest,
                   db: Session = Depends(get_db)):
     try:
         crud.delete_wallet(db=db, wallet_id=request.wallet_id)
@@ -304,8 +306,9 @@ def delete_wallet(request: deleteWalletRequest,
 
 ### Categories Routes
 @app.get('/categories')
-def get_categories(request: Request, db: Session = Depends(get_db)):
-    username = crud.get_user(db, user_id=user_id).username
+async def get_categories(request: Request, db: Session = Depends(get_db)):
+    user_id = request.cookies.get("user_id")
+    username = crud.get_user(db, user_id=user_id).fullname
     categories = crud.get_categories(db, user_id=user_id)
     transaction_types = crud.get_transaction_types(db, ie=True)
     return templates.TemplateResponse('categories.html', 
@@ -315,10 +318,12 @@ def get_categories(request: Request, db: Session = Depends(get_db)):
                                        'transaction_types': transaction_types})
 
 @app.post("/categories/create")
-def add_category(category: Annotated[str, Form()],
-                 transaction_type_id: Annotated[str, Form()],
-                  description: Annotated[str, Form()],
-                  db: Session = Depends(get_db)):
+async def add_category(request: Request,
+                category: Annotated[str, Form()],
+                transaction_type_id: Annotated[str, Form()],
+                description: Annotated[str, Form()],
+                db: Session = Depends(get_db)):
+    user_id = request.cookies.get("user_id")
     try:
         crud.create_category(db=db, user_id=user_id, transaction_type_id=transaction_type_id, category_name=category, description=description)
         return RedirectResponse(url="/categories", status_code=303)
@@ -326,7 +331,7 @@ def add_category(category: Annotated[str, Form()],
         return ValueError("Invalid category name", status_code=400)
 
 @app.post("/categories/update")
-def update_category(category_id: Annotated[int, Form()],
+async def update_category(category_id: Annotated[int, Form()],
                     category: Annotated[str, Form()],
                     transaction_type_id: Annotated[str, Form()],
                     description: Annotated[str, Form()],    
@@ -340,15 +345,55 @@ def update_category(category_id: Annotated[int, Form()],
 ### User Routes
 @app.get('/login')
 def get_login(request: Request):
-    return templates.TemplateResponse('login.html', {'request': request})
+    return templates.TemplateResponse('login.html', {'request': request, 'error': None})
 
-# @app.post('/login')
-# def login(request: Request, db: Session = Depends(get_db)):
-#     form = LoginForm(request)
-#     if not form.validate():
-#         return templates.TemplateResponse('login.html', {'request': request, 'form': form})
+@app.post('/login')
+async def login(request: Request, db: Session = Depends(get_db)):
+    form = schemas.LoginForm(request)
+    await form.load_data()  # Load form data asynchronously
 
-#     user = crud.get_user_by_username(db, username=form.username.data)
-#     if not user:
-#         return templates.TemplateResponse('login.html', {'request': request, 'form': form, 'error': "Invalid username"})
+    user = crud.get_user_by_username(db, username=form.username)
+    if not user:
+        return templates.TemplateResponse('login.html', {'request': request, 'error': "Invalid username"})
 
+    if not crud.verify_password(db, user, form.password):
+        return templates.TemplateResponse('login.html', {'request': request, 'error': "Invalid password"})
+
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="user_id", value=str(user.id), httponly=True)
+    return response
+
+@app.get('/logout')
+async def logout():
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie(key="user_id")
+    return response
+
+@app.post('/signup')
+async def signup(request: Request, db: Session = Depends(get_db)):
+    form = schemas.SignupForm(request)
+    await form.load_data()  # Load form data asynchronously
+
+    user = crud.get_user_by_username(db, username=form.username)
+    if user:
+        return templates.TemplateResponse('login.html', {'request': request, 'error': "Username already exists"})
+
+    user = crud.get_user_by_email(db, email=form.email)
+    if user:
+        return templates.TemplateResponse('login.html', {'request': request, 'error': "Email already exists"})
+
+    user = crud.create_user(db, user=form)
+    
+    # New user setup
+    with open('preparation/initial_categories.txt', 'r') as category_file:
+        initial_categories_txt = category_file.read()
+    initial_categories = ast.literal_eval(initial_categories_txt)
+
+    with open('preparation/initial_wallets.txt', 'r') as wallet_file:
+        initial_wallets_txt = wallet_file.read()
+    initial_wallets = ast.literal_eval(initial_wallets_txt)
+
+    crud.new_user_setup(db, wallet_list=initial_wallets, category_list=initial_categories, user_id=user.id)
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="user_id", value=str(user.id), httponly=True)
+    return response

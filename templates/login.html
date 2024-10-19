@@ -37,6 +37,7 @@
       <div class="container container-login animated fadeIn">
         <h3 class="text-center">Sign In</h3>
         <div class="login-form">
+          <form action="/login" method="post">
           <div class="form-sub">
             <div class="form-floating form-floating-custom mb-3">
               <input
@@ -63,7 +64,18 @@
                 <i class="icon-eye"></i>
               </div>
             </div>
+            
+            {% if error %}
+              <div class="alert alert-danger" role="alert">
+                {{ error }}
+              </div>
+            {% endif %}
+
           </div>
+          <div class="form-action mb-3">
+            <button type="submit" class="btn btn-primary w-100 btn-login">Sign In</button>
+          </div>
+          </form>
           <!-- <div class="row m-0">
             <div class="d-flex form-sub">
               <div class="form-check">
@@ -74,9 +86,7 @@
               <a href="#" class="link float-end">Forget Password ?</a>
             </div>
           </div> -->
-          <div class="form-action mb-3">
-            <a href="#" class="btn btn-primary w-100 btn-login">Sign In</a>
-          </div>
+          
           <div class="login-account">
             <span class="msg">Don't have an account yet ?</span>
             <a href="#" id="show-signup" class="link">Sign Up</a>
@@ -84,17 +94,30 @@
         </div>
       </div>
 
+      <!-- Sign Up -->
       <div class="container container-signup animated fadeIn">
         <h3 class="text-center">Sign Up</h3>
         <div class="login-form">
+          <form action="/signup" method="post">
           <div class="form-sub">
+            <div class="form-floating form-floating-custom mb-3">
+              <input
+                id="usernamesignin"
+                name="username"
+                type="text"
+                class="form-control"
+				        placeholder="username"
+                required
+              />
+              <label for="username">Username</label>
+            </div>
             <div class="form-floating form-floating-custom mb-3">
               <input
                 id="fullname"
                 name="fullname"
                 type="text"
                 class="form-control"
-				placeholder="fullname"
+				        placeholder="fullname"
                 required
               />
               <label for="fullname">Fullname</label>
@@ -105,7 +128,7 @@
                 name="email"
                 type="email"
                 class="form-control"
-				placeholder="email"
+				        placeholder="email"
                 required
               />
               <label for="email">Email</label>
@@ -113,10 +136,10 @@
             <div class="form-floating form-floating-custom mb-3">
               <input
                 id="passwordsignin"
-                name="passwordsignin"
+                name="password"
                 type="password"
                 class="form-control"
-				placeholder="passwordsignin"
+				        placeholder="password"
                 required
               />
               <label for="passwordsignin">Password</label>
@@ -130,7 +153,7 @@
                 name="confirmpassword"
                 type="password"
                 class="form-control"
-				placeholder="confirmpassword"
+				        placeholder="confirmpassword"
                 required
               />
               <label for="confirmpassword">Confirm Password</label>
@@ -138,24 +161,34 @@
                 <i class="icon-eye"></i>
               </div>
             </div>
+            <div class="form-sub">
+              <div id="confirm-password-error" class="invalid-feedback">Password and Confirm Password must be the same</div>
+            </div>
+
+            <script>
+              const signupForm = document.querySelector('.container-signup form');
+              signupForm.addEventListener('submit', function(e) {
+                const passwordsignin = document.querySelector('#passwordsignin').value;
+                const confirmpassword = document.querySelector('#confirmpassword').value;
+                if (passwordsignin !== confirmpassword) {
+                  document.querySelector('#confirm-password-error').style.display = 'block';
+                  e.preventDefault();
+                }
+              });
+            </script>
+
           </div>
           <div class="row form-sub m-0">
             <div class="alert alert-warning alert-dismissible fade show" role="alert">
               <strong>Important!</strong> This app is only a final project of Nhien Le so the app may not be developed and updated further.
               <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" name="agree" id="agree" />
-              <label class="form-check-label" for="agree"
-                >I Agree the terms and conditions.</label
-              >
-            </div>
           </div>
           <div class="form-action">
             <a href="#" id="show-signin" class="btn btn-danger btn-link btn-login me-3">Cancel</a>
-            <a href="#" class="btn btn-primary btn-login">Sign Up</a>
+            <button type="submit" class="btn btn-primary btn-login">Sign Up</button>
           </div>
+          </form>
         </div>
       </div>
     </div>

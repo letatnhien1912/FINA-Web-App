@@ -9,6 +9,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, index=True)
+    fullname = Column(String)
+    email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     registered_date = Column(DateTime, default=datetime.now)
@@ -26,6 +28,7 @@ class Wallet(Base):
     wallet_name = Column(String)
     description = Column(String)
     liability = Column(Integer)
+    initial_balance = Column(Float)
 
     user = relationship("User", back_populates="wallets")
     transaction = relationship("Transaction", back_populates="wallet", cascade="all, delete-orphan")

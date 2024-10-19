@@ -7,6 +7,7 @@ class WalletBase(BaseModel):
     wallet_name: str
     description: str
     liability: int
+    initial_balance: float
 
 class Wallet(WalletBase):
     id: int
@@ -57,11 +58,15 @@ class Transaction(TransactionBase):
 ### users table
 class UserBase(BaseModel):
     username: str
+    fullname: str
+    email: str
     registered_date: datetime
     updated_date: datetime
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
+    fullname: Optional[str] = None
+    email: Optional[str] = None
     is_active: Optional[bool] = None
 
 class UserCreate(UserBase):
@@ -77,3 +82,28 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class LoginForm:
+    def __init__(self, request):
+        self.request = request
+        self.username = None
+        self.password = None
+
+    async def load_data(self):
+        form_data = await self.request.form()
+        self.username = form_data.get('username')
+        self.password = form_data.get('password')
+
+class SignupForm:
+    def __init__(self, request):
+        self.request = request
+        self.username = None
+        self.password = None
+        self.fullname = None
+        self.email = None
+
+    async def load_data(self):
+        form_data = await self.request.form()
+        self.username = form_data.get('username')
+        self.password = form_data.get('password')
+        self.fullname = form_data.get('fullname')
+        self.email = form_data.get('email')
