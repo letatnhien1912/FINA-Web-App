@@ -1,0 +1,194 @@
+{% extends "layout.html" %}
+
+{% block title %}Assets Dashboard{% endblock %}
+
+{% block pagename %}Assets Dashboard{% endblock %}
+
+{% block inner %}
+<!-- Row Card -->
+<div class="row">
+  <div class="col-sm-6 col-md-3">
+    <div class="card card-stats card-primary card-round bg-primary-gradient">
+      <div class="card-body curves-shadow">
+        <div class="row">
+          <div class="col-5">
+            <div class="icon-big text-center">
+              <i class="fas fa-wallet"></i>
+            </div>
+          </div>
+          <div class="col-7 col-stats">
+            <div class="assets">
+              <p class="card-category">Available Assets</p>
+              <h4 class="card-title">{{ scorecard.available_assets | format_money(currency) }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-md-3">
+    <div class="card card-stats card-secondary card-round bg-secondary-gradient">
+      <div class="card-body bubble-shadow">
+        <div class="row">
+          <div class="col-5">
+            <div class="icon-big text-center">
+              <i class="fas fa-caret-square-left"></i>
+            </div>
+          </div>
+          <div class="col-7 col-stats">
+            <div class="receivables">
+              <p class="card-category">Receivables</p>
+              <h4 class="card-title">{{ scorecard.receivables | format_money(currency) }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-md-3">
+    <div class="card card-stats card-danger card-round bg-danger-gradient">
+      <div class="card-body curves-shadow">
+        <div class="row">
+          <div class="col-5">
+            <div class="icon-big text-center">
+              <i class="fas fa-caret-square-right"></i>
+            </div>
+          </div>
+          <div class="col-7 col-stats">
+            <div class="payables">
+              <p class="card-category">Payables</p>
+              <h4 class="card-title">{{ scorecard.payables | format_money(currency) }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Assets Distribution Pie Chart -->
+  <div class="col-12 col-md-5 mb-3">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="card-head-row">
+          <div class="card-title"><i class="fas fa-home text-primary me-3"></i>Assets Distribution</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if assets_pie %}
+        <div class="chart-container">
+          {{ assets_pie | safe }}
+        </div>
+        {% endif %}
+
+        <div class="table-responsive mt-3">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th class='text-info'>Wallet</th>
+                <th class='text-info'>Balance</th>
+                <th class='text-info'>Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for wallet in wallets %}
+              <tr>
+                <td>{{ wallet.wallet_name }}</td>
+                <td>{{ wallet.current_balance | format_money(currency) }}</td>
+                <td>{{ wallet.assets_distribution | format_percentage }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-7 mb-3">
+    <!-- Assets Line Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-head-row row">
+          <div class="card-title col"><i class="fas fa-chart-area text-success me-3"></i>Cash Flow{% if selected_wallet %} of <span class="text-primary">{{ selected_wallet.wallet_name }}</span>{% endif %}</div>
+          <div class="text-end text-muted col-auto">
+            {% if fromdate %}From <span class="text-primary">{{ fromdate }}</span> {% if todate %} to <span class="text-primary">{{ todate }}</span>{% endif %}{% endif %}
+          </div>
+        </div>
+        <div class="card-header-filter mt-2">
+          <form action="/assets_dashboard" method="get" id="cashflow_filter_form">
+            <div class="row g-2">
+              <div class="col-6 col-md-3">
+                <input type="date" name="fromdate" id="fromdate" class="form-control">
+              </div>
+              <div class="col-6 col-md-3">
+                <input type="date" name="todate" id="todate" class="form-control">
+              </div>
+              <div class="col-12 col-md-2">
+                <select name="wallet" id="wallet" class="form-control">
+                  <option value="" disabled selected hidden>Wallet</option>
+                  {% for wallet in all_options.wallets %}
+                  <option value="{{ wallet.id }}" {% if wallet.id == wallet_id %}selected{% endif %}>{{ wallet.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <button type="reset" class="btn btn-danger" onclick="window.location.href='/assets_dashboard'"><i class="icon-refresh"></i> Reset</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if cashflow_chart %}
+        <div class="chart-container">
+          {{ cashflow_chart | safe }}
+        </div>
+        {% else %}
+        <div class="text-danger">No transactions</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if debt_wallets %}
+    <div class="card mt-4">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-clock text-danger me-3"></i>Debts Balance</div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th class="text-danger">Debtor/Creditor</th>
+                <th class="text-danger">Type</th>
+                <th class="text-danger">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for wallet in debt_wallets %}
+              <tr>
+                <td>{{ wallet.wallet_name }}</td>
+                <td>{% if wallet.debts > 0 %}
+                  <i class="fas fa-arrow-left text-success me-3"></i>Receivable{% else %}
+                  <i class="fas fa-arrow-right text-danger me-3"></i>Payable{% endif %}
+                </td>
+                <td>{{ wallet.debts | format_money(currency) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

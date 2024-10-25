@@ -67,7 +67,7 @@
                           <label>Type</label>
                           <select id="addType" name="selected_type" class="form-control" required>
                             <option value="" disabled selected hidden>select type</option>
-                            {% for type in all_options.transaction_types %}
+                            {% for type in all_options.transaction_types[:2] %}
                                 <option value="{{ type.id }}">{{ type.name }}</option>
                             {% endfor %}
                         </select>
@@ -98,7 +98,7 @@
                       <div class="col-md-6">
                         <div class="form-group form-group-default">
                           <label>Amount</label>
-                          <input id="addAmount" name="amount" class="form-control" type="number"
+                          <input id="addAmount" name="amount" class="form-control" type="number" step="0.01"
                             placeholder="100,000" required/>
                         </div>
                       </div>
@@ -163,7 +163,7 @@
                           <select id="addDebtCategory" name="category" class="form-control" required>
                             <option value="" selected disabled hidden>select category</option>
                             
-                            <option value=0>Borrow/Receive from others</option>
+                            <option value=0>Borrow/Collect from others</option>
                             <option value=1>Pay/Lend to others</option>
                             
                         </select>
@@ -183,7 +183,7 @@
                       <div class="col-md-6">
                         <div class="form-group form-group-default">
                           <label>Amount</label>
-                          <input id="addDebtAmount" name="amount" class="form-control" type="number"
+                          <input id="addDebtAmount" name="amount" class="form-control" type="number"  step="0.01"
                             placeholder="100,000" required/>
                         </div>
                       </div>
@@ -272,7 +272,7 @@
                       <div class="col-md-6">
                         <div class="form-group form-group-default">
                           <label>Amount</label>
-                          <input id="addTransferAmount" name="amount" class="form-control" type="number"
+                          <input id="addTransferAmount" name="amount" class="form-control" type="number"  step="0.01"
                             placeholder="100,000" required/>
                         </div>
                       </div>
@@ -289,8 +289,7 @@
                         </div>
                       </div>
                       
-
-                      <div class="col-md-6">
+                      <div class="col-md-12">
                         <div class="form-group form-group-default">
                           <label>description</label>
                           <input id="addTransferDescription" name="description" class="form-control" type="text"
@@ -316,73 +315,89 @@
 
         <div class="card-body">
             <!-- Filter -->
-            <div class="row">       
-                <div class="col-auto">
-                    <ul class="nav nav-pills nav-pills-primary nav-justified mb-3" role="tablist">
-                        <li class="nav-item" style="padding-right: 10px;">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary btn-border dropdown-toggle" data-bs-toggle="dropdown" id="type">Type</button>
-                                <div class="dropdown-menu">
-                                    {% for type in options.transaction_types %}
-                                        {% for id, name in type.items() %}
-                                            <a class="dropdown-item text-start" href="#" onclick="updateUrlParams('transaction_type_id', '{{ id }}')">{{ name }}</a>
-                                        {% endfor %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </li>
-                        <li class="nav-item" style="padding-right: 10px;">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary btn-border dropdown-toggle" data-bs-toggle="dropdown" id="category">Category</button>
-                                <div class="dropdown-menu">
+            <div class="row">
+              <!-- Filter dropdowns with responsive columns -->
+              <div class="col-md-4 col-sm-12 mb-2">
+                  <ul class="nav nav-pills nav-pills-primary mb-3 flex-wrap" role="tablist">
+                      <!-- Type Dropdown -->
+                      <li class="nav-item me-2">
+                          <div class="dropdown">
+                              <button class="btn btn-black dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                  Type
+                              </button>
+                              <ul class="dropdown-menu">
+                                  {% if options.transaction_types %}
+                                  {% for type in options.transaction_types %}
+                                      {% for id, name in type.items() %}
+                                          <li><a class="dropdown-item text-start" href="#" onclick="updateUrlParams('transaction_type_id', '{{ id }}')">{{ name }}</a></li>
+                                      {% endfor %}
+                                  {% endfor %}
+                                  {% endif %}
+                              </ul>
+                          </div>
+                      </li>
+                      <!-- Category Dropdown -->
+                      <li class="nav-item me-2">
+                          <div class="dropdown">
+                              <button class="btn btn-black dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                  Category
+                              </button>
+                              <ul class="dropdown-menu">
+                                  {% if options.categories %}
                                     {% for category in options.categories %}
                                         {% for id, name in category.items() %}
-                                            <a class="dropdown-item text-start" href="#" onclick="updateUrlParams('category_id', '{{ id }}')">{{ name }}</a>
+                                            <li><a class="dropdown-item text-start" href="#" onclick="updateUrlParams('category_id', '{{ id }}')">{{ name }}</a></li>
                                         {% endfor %}
                                     {% endfor %}
-                                </div>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary btn-border dropdown-toggle" data-bs-toggle="dropdown" id="wallet">Wallet</button>
-                                    <div class="dropdown-menu">
-                                    {% for wallet in options.wallets %}
-                                        {% for id, name in wallet.items() %}
-                                            <a class="dropdown-item text-start" href="#" onclick="updateUrlParams('wallet_id', '{{ id }}')">{{ name }}</a>
-                                        {% endfor %}
-                                    {% endfor %}  
-                                    </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="col">
-                    <form method="post" id="date_filter_form" action="/transactions" class="form-group" style="padding-top: 0;">
-                        <input type="date" name="startdate" id="startdate" class="btn btn-primary btn-border">
-                        <label> - </label>
-                        <input type="date" name="enddate" id="enddate" class="btn btn-primary btn-border">
-                        <button type="submit" class="btn btn-primary">Filter</button>
-                        <!-- Reset button -->
-                        <button type="reset" class="btn btn-danger" onclick="window.location.href='/transactions'"
-                        ><i class="icon-refresh"></i> Reset</button>
-                    </form>
-                    
-                </div>
-                
-            </div>
+                                  {% endif %}
+                              </ul>
+                          </div>
+                      </li>
+                      <!-- Wallet Dropdown -->
+                      <li class="nav-item">
+                          <div class="dropdown">
+                              <button class="btn btn-black dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                  Wallet
+                              </button>
+                              <ul class="dropdown-menu">
+                                {% if options.wallets %}
+                                  {% for wallet in options.wallets %}
+                                      {% for id, name in wallet.items() %}
+                                          <li><a class="dropdown-item text-start" href="#" onclick="updateUrlParams('wallet_id', '{{ id }}')">{{ name }}</a></li>
+                                      {% endfor %}
+                                  {% endfor %}
+                                {% endif %}
+                              </ul>
+                          </div>
+                      </li>
+                  </ul>
+              </div>
+          
+              <!-- Date Filter Form -->
+              <div class="col-md-4 col-sm-12">
+                  <form method="post" id="date_filter_form" action="/transactions" class="form-inline d-flex align-items-center">
+                      <input type="date" name="startdate" id="startdate" class="form-control me-2 btn-black">
+                      <span class="me-2">-</span>
+                      <input type="date" name="enddate" id="enddate" class="form-control me-2 btn-black">
+                      <button type="submit" class="btn btn-primary me-2">Filter</button>
+                      <!-- Reset Button -->
+                      <button type="reset" class="btn btn-danger d-flex align-items-center" onclick="window.location.href='/transactions'">
+                          <i class="icon-refresh"></i> Reset
+                      </button>
+                  </form>
+              </div>
+          </div>
             
             <div class="row">
                     <span class="text-secondary inline">
                         {% set filters = [] %}
-                        {% if request.query_params.get('transaction_type_id') %}
+                        {% if request.query_params.get('transaction_type_id') and options.transaction_types %}
                             {% set filters = filters + ['Type: ' ~ options.transaction_types[0][request.query_params.get('transaction_type_id') | int]] %}
                         {% endif %}
-                        {% if request.query_params.get('category_id') %}
+                        {% if request.query_params.get('category_id') and options.categories %}
                             {% set filters = filters + ['Category: ' ~ options.categories[0][request.query_params.get('category_id') | int]] %}
                         {% endif %}
-                        {% if request.query_params.get('wallet_id') %}
+                        {% if request.query_params.get('wallet_id') and options.wallets %}
                             {% set filters = filters + ['Wallet: ' ~ options.wallets[0][request.query_params.get('wallet_id') | int]] %}
                         {% endif %}
                         {% if request.query_params.get('startdate') and request.query_params.get('enddate') %}
@@ -391,7 +406,7 @@
                         {{ filters | join(', ') }}
 
                         {% if error is not none %}
-                        <span class="text-danger">(No records found as per the filters)</span>
+                        <span class="text-danger">{{ error|safe }}</span>
                         {% endif %}
                     </span>
             </div>
@@ -407,7 +422,7 @@
                             <th>Wallet</th>
                             <th>Amount</th>
                             <th>Description</th>
-                            <th>Action</th>
+                            <th style="text-align:center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -418,19 +433,19 @@
                             <td>{{ transaction.transaction_type.transaction_type_name }}</td>
                             <td>{{ transaction.category.category_name }}</td>
                             <td>{{ transaction.wallet.wallet_name }}</td>
-                            <td>{{ transaction.amount|format_money }}</td>
+                            <td>{{ transaction.amount|format_money(currency) }}</td>
                             <td>{{ transaction.description }}</td>
-                            <td>
+                            <td style="text-align:center">
                                 <div class="form-button-action">
                                     <button type="button" data-bs-toggle="tooltip" title="Update"
                                         class="btn btn-link btn-primary btn-lg" 
                                         onclick="openUpdateModal({{ transaction.id }},
                                                                 '{{ transaction.transaction_date.strftime('%Y-%m-%d') }}',
                                                                 {{ transaction.transaction_type_id }},
-                                                                {{ transaction.category_id }},
                                                                 {{ transaction.wallet_id }},
                                                                 {{ transaction.amount }},
-                                                                '{{ transaction.description }}')">
+                                                                '{{ transaction.description }}',
+                                {% if transaction.category_id %}{{ transaction.category_id }}{% endif %})">
                                         <i class="fa fa-edit"></i>
                                     </button>
                                     <button type="button" data-bs-toggle="tooltip" title="Remove"
@@ -489,11 +504,11 @@
                                     <div class="col-md-6">
                                         <div class="form-group form-group-default">
                                             <label>Category</label>
-                                            <select id="updateCategory" name="category" class="form-control" required>
-                                                <option disabled selected>select category</option>
-                                                {% for category in all_options.categories %}
-                                                    <option value="{{ category.id }}">{{ category.name }}</option>
-                                                {% endfor %}
+                                            <select id="updateCategory" name="category" class="form-control">
+                                              <option disabled selected>Select category</option>
+                                              {% for category in all_options.categories %}
+                                                  <option value="{{ category.id }}">{{ category.name }}</option>
+                                              {% endfor %}
                                             </select>
                                         </div>
                                     </div>
@@ -505,13 +520,16 @@
                                                 {% for wallet in all_options.wallets %}
                                                     <option value="{{ wallet.id }}">{{ wallet.name }}</option>
                                                 {% endfor %}
+                                                {% for wallet in all_options.debtors %}
+                                                    <option value="{{ wallet.id }}" class="text-danger">{{ wallet.name }}</option>
+                                                {% endfor %}
                                             </select>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group form-group-default">
                                             <label>Amount</label>
-                                            <input id="updateAmount" name="amount" class="form-control" type="number" placeholder="100,000" required />
+                                            <input id="updateAmount" name="amount" class="form-control" type="number"  step="0.01" placeholder="100,000" required />
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -575,9 +593,11 @@
 {% endblock %}
 
 {% block script %}
+<!-- Include Date Range Picker JS -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
 <!-- Filters script -->
+
 <script>
     // Function to get the current query parameters
     function getQueryParams() {
@@ -634,52 +654,48 @@
 </script>
 
 <!-- Transactions script -->
+{% if request.cookies.get("darkmode") == 'dark' %}
+  <style>
+      th {color: white !important;}
+  </style>
+{% endif %}
 <script>
     function deleteTransaction(transactionId) {
-        // Show SweetAlert confirmation dialog
-        swal({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
-            icon: "warning",
-            buttons: {
-                cancel: {
-                    visible: true,
-                    text: "No, cancel!",
-                    className: "btn btn-danger",
-                },
-                confirm: {
-                    text: "Yes, delete it!",
-                    className: "btn btn-success",
-                },
+    // Show SweetAlert confirmation dialog
+    swal({
+        title: "Are you sure?",
+        text: "You won't be able to revert this!",
+        icon: "warning",
+        buttons: {
+            cancel: {
+                visible: true,
+                text: "No, cancel!",
+                className: "btn btn-danger",
             },
-        }).then((willDelete) => {
-            if (willDelete) {
-                // Proceed to delete the transaction
-                fetch('/transactions/delete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ transaction_id: transactionId }),
-                })
-                .then(response => {
-                    if (response.redirected) {
-                        // If the response redirects, follow the redirect
-                        window.location.href = response.url;
-                    } else {
-                        swal("Error!", "Failed to delete the transaction.", {
-                            icon: "error",
-                            buttons: {
-                                confirm: {
-                                    className: "btn btn-danger",
-                                },
-                            },
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting transaction:', error);
-                    swal("Error!", "An error occurred while deleting the transaction.", {
+            confirm: {
+                text: "Yes, delete it!",
+                className: "btn btn-success",
+            },
+        },
+    }).then((willDelete) => {
+        if (willDelete) {
+            // Get the current URL
+            const currentUrl = window.location.href;
+
+            // Proceed to delete the transaction
+            fetch(`/transactions/delete?next=${encodeURIComponent(currentUrl)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ transaction_id: transactionId }),
+            })
+            .then(response => {
+                if (response.redirected) {
+                    // If the response redirects, follow the redirect
+                    window.location.href = response.url;
+                } else {
+                    swal("Error!", "Failed to delete the transaction.", {
                         icon: "error",
                         buttons: {
                             confirm: {
@@ -687,29 +703,42 @@
                             },
                         },
                     });
-                });
-            } else {
-                swal("Cancelled", "Your transaction is safe!", {
-                    icon: "info",
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting transaction:', error);
+                swal("Error!", "An error occurred while deleting the transaction.", {
+                    icon: "error",
                     buttons: {
                         confirm: {
-                            className: "btn btn-success",
+                            className: "btn btn-danger",
                         },
                     },
                 });
-            }
-        });
-    }
+            });
+        } else {
+            swal("Cancelled", "Your transaction is safe!", {
+                icon: "info",
+                buttons: {
+                    confirm: {
+                        className: "btn btn-success",
+                    },
+                },
+            });
+        }
+    });
+}
 
-    function openUpdateModal(id, date, typeId, categoryId, walletId, amount, description) {
+
+    function openUpdateModal(id, date, typeId, walletId, amount, description, categoryId = null) {
         // Set form values
         document.getElementById("updateTransactionId").value = id;
         document.getElementById("updateDate").value = date;
         document.getElementById("updateType").value = typeId;
-        document.getElementById("updateCategory").value = categoryId;
         document.getElementById("updateWallet").value = walletId;
         document.getElementById("updateAmount").value = amount;
         document.getElementById("updateDescription").value = description;
+        if (categoryId) {document.getElementById("updateCategory").value = categoryId;}
 
         // Show the modal
         $('#updateRowModal').modal('show');

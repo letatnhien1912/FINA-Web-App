@@ -1,0 +1,242 @@
+{% extends "layout.html" %}
+
+{% block title %}Income Dashboard{% endblock %}
+
+{% block pagename %}Income Dashboard{% endblock %}
+
+{% block inner %}
+<div class="row">
+  <div class="col-md-5">
+    <h3 class="fw-bold mb-3">Income Statement{% if fromdate and todate %}
+      <span class="fw-light text-muted h6"> {{ fromdate }}  to  {{ todate }}</span>{% endif %}
+      {% if selected_wallet %} | <span class="fw-light text-muted h6">{{ selected_wallet.wallet_name }}</span>{% endif %}
+    </h3>
+  </div>
+  <div class="col-md-7 col-sm-12 text-end">
+    <form action="/income_dashboard" method="get" id="cashflow_filter_form">
+      <div class="row g-2">
+        <div class="col-6 col-md-3">
+          <input type="date" name="fromdate" id="fromdate" class="form-control">
+        </div>
+        <div class="col-6 col-md-3">
+          <input type="date" name="todate" id="todate" class="form-control">
+        </div>
+        <div class="col-12 col-md-3">
+          <select name="wallet" id="wallet" class="form-control">
+            <option value="" disabled selected hidden>Wallet</option>
+            {% for wallet in wallets %}
+              <option value="{{ wallet.id }}">{{ wallet.wallet_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-primary">Filter</button>
+          <button type="reset" class="btn btn-danger" onclick="window.location.href='/income_dashboard'"><i class="icon-refresh"></i> Reset</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<br>
+<!-- Row Scorecard -->
+<div class="row">
+  
+  <div class="col-md-4">
+    <div class="card card-success bg-success-gradient">
+      <div class="card-body pb-0">
+        <div class="h1 fw-bold float-end">{{ scorecard.income | format_money(currency) }}</div>
+        <h2 class="mb-2">Income</h2>
+        <br><br><br>
+        <div class="pull-in sparkline-fix chart-as-background" style="width: 96%; margin: 0 auto;">
+          <div id="incomeSparkline"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-danger bg-danger-gradient">
+      <div class="card-body pb-0">
+        <div class="h1 fw-bold float-end">{{ scorecard.expense | format_money(currency) }}</div>
+        <h2 class="mb-2">Expense</h2>
+        <br><br><br>
+        <div class="pull-in sparkline-fix chart-as-background" style="width: 96%; margin: 0 auto;">
+          <div id="expenseSparkline"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-secondary bg-secard-secondary-gradient">
+      <div class="card-body bubble-shadow pb-0" style="height: 100%">
+        <div class="h1 fw-bold float-end">{{ scorecard.earnings | format_money(currency) }}</div>
+        <h2 class="mb-2">Earnings</h2>
+        <p>Income - Expense</p>
+        <br>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Row Card -->
+<div class="row">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-head-row">
+          <div class="card-title"><i class="fas fa-chart-line text-success me-3"></i> Income</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart">
+          {{ income_chart | safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-head-row">
+          <div class="card-title"><i class="fas fa-money-check text-danger me-3"></i> Expense</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart">
+          {{ expense_chart | safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-head-row">
+          <div class="card-title"><i class="fas fa-arrow-alt-circle-up text-secondary me-3"></i> Earnings Trend</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart">
+          {{ earnings_chart | safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row">
+  <div class="col-md-8"> 
+    <div class="card">
+      <div class="card-header">
+        <div class="card-head-row">
+          <div class="card-title"><i class="fas fa-chart-line text-success me-3"></i>Cash Flow by Category</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <!-- Cash In Flow Table -->
+          {% if cash_inflow %}
+          <div class="table-responsive me-3">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="text-success">Category</th>
+                  <th class="text-success">Inflow</th>
+                  <th class="text-success">Contribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                  {% for cash in cash_inflow.df %}
+                    <tr>
+                      <td {% if cash.category_id < 1 %}style="color: #FDAF4B;"{% endif %}>{{ cash.category_name }}</td>
+                      <td {% if cash.category_id < 1 %}style="color: #FDAF4B;"{% endif %}>{{ cash.amount | format_money(currency) }}</td>
+                      <td {% if cash.category_id < 1 %}style="color: #FDAF4B;"{% endif %}>{{ cash.percentage | format_percentage }}</td>
+                    </tr>
+                  {% endfor %}
+                
+              </tbody>
+              {% if cash_inflow.total %}
+              <tfoot>
+                <tr>
+                  <td class="fw-bold" {% if request.cookies.get("darkmode")=='dark' %}style="color: white;"{% endif %}>Total</td>
+                  <td class="fw-bold" {% if request.cookies.get("darkmode")=='dark' %}style="color: white;"{% endif %}>{{ cash_inflow.total | format_money(currency) }}</td>
+                  <td class="fw-bold" {% if request.cookies.get("darkmode")=='dark' %}style="color: white;"{% endif %}>100.00%</td>
+                </tr>
+              </tfoot>
+              {% endif %}
+            </table>
+          </div>
+          {% endif %}
+          <!-- Cash Out Flow Table -->
+          {% if cash_outflow %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th class="text-danger">Category</th>
+                  <th class="text-danger">Outflow</th>
+                  <th class="text-danger">Contribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                  
+                    {% for cash in cash_outflow.df %}
+                    <tr>
+                      <td {% if cash.category_id < 1 %}style="color: #FDAF4B;"{% endif %}>{{ cash.category_name }}</td>
+                      <td {% if cash.category_id < 1 %}style="color: #FDAF4B;"{% endif %}>{{ cash.amount | format_money(currency) }}</td>
+                      <td {% if cash.category_id < 1 %}style="color: #FDAF4B;"{% endif %}>{{ cash.percentage | format_percentage }}</td>
+                    </tr>
+                    {% endfor %}
+                  
+              </tbody>
+              {% if cash_outflow.total %}
+              <tfoot>
+                <tr>
+                  <td class="fw-bold" {% if request.cookies.get("darkmode")=='dark' %}style="color: white;"{% endif %}>Total</td>
+                  <td class="fw-bold" {% if request.cookies.get("darkmode")=='dark' %}style="color: white;"{% endif %}>{{ cash_outflow.total | format_money(currency) }}</td>
+                  <td class="fw-bold" {% if request.cookies.get("darkmode")=='dark' %}style="color: white;"{% endif %}>100.00%</td>
+                </tr>
+              </tfoot>
+              {% endif %}
+            </table>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+  $("#incomeSparkline").sparkline({{ scorecard.incomeSparkline }}, {
+        type: "line",
+        height: "70",
+        width: "100%",
+        lineWidth: "2",
+        lineColor: "rgba(255, 255, 255, .5)",
+        fillColor: "rgba(255, 255, 255, .15)",
+        lineSmooth: true
+      });
+
+  $("#expenseSparkline").sparkline({{ scorecard.expenseSparkline }}, {
+        type: "line",
+        height: "70",
+        width: "100%",
+        lineWidth: "2",
+        lineColor: "rgba(255, 255, 255, .5)",
+        fillColor: "rgba(255, 255, 255, .15)",
+        lineSmooth: true
+      });
+
+</script>
+{% endblock %}

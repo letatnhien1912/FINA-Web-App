@@ -9,7 +9,7 @@
     />
     <link
       rel="icon"
-      href="static/img/kaiadmin/favicon.ico"
+      href="static/img/icon.svg"
       type="image/x-icon"
     />
 
@@ -39,19 +39,19 @@
     <link rel="stylesheet" href="static/css/kaiadmin.min.css" />
 
   </head>
-  <body>
+  <body {% if request.cookies.get("darkmode")=="dark" %}data-background-color="dark"{% endif %}>
     <div class="wrapper">
       <!-- Sidebar -->
-      <div class="sidebar" data-background-color="dark">
+      <div class="sidebar" data-background-color="dark2">
         <div class="sidebar-logo">
           <!-- Logo Header -->
-          <div class="logo-header" data-background-color="dark">
+          <div class="logo-header" data-background-color="dark2">
             <a href="asset.html" class="logo">
               <img
-                src="static/img/kaiadmin/logo_light.svg"
+                src="static/img/logo3.svg"
                 alt="navbar brand"
                 class="navbar-brand"
-                height="20"
+                height="60"
               />
             </a>
             <div class="nav-toggle">
@@ -70,7 +70,7 @@
           <!-- End Logo Header -->
         <div class="sidebar-wrapper scrollbar scrollbar-inner">
           <div class="sidebar-content">
-            <ul class="nav nav-secondary">
+            <ul class="nav nav-primary">
               <!-- REPORTS SECTION -->
               <li class="nav-section">
                 <span class="sidebar-mini-icon">
@@ -78,16 +78,16 @@
                 </span>
                 <h4 class="text-section">REPORTS</h4>
               </li>
-              <li class="nav-item {% if request.path == '/asset' %}active{% endif %}">
-                  <a href="/asset">
+              <li class="nav-item {% if request.path == '/assets_dashboard' %}active{% endif %}">
+                  <a href="/assets_dashboard">
                       <i class="fas fa-home"></i>
                       <p>Assets Dashboard</p>
                   </a>
               </li>
-              <li class="nav-item {% if request.path == '/income_expense' %}active{% endif %}">
-                  <a href="/income_expense">
+              <li class="nav-item {% if request.path == '/income_dashboard' %}active{% endif %}">
+                  <a href="/income_dashboard">
                       <i class="fas fa-coins"></i>
-                      <p>Expense Dashboard</p>
+                      <p>Income Dashboard</p>
                   </a>
               </li>
 
@@ -98,12 +98,12 @@
                   </span>
                   <h4 class="text-section">DATABASE</h4>
               </li>
-              <li class="nav-item {% if request.path == '/budget' %}active{% endif %}">
+              <!-- <li class="nav-item {% if request.path == '/budget' %}active{% endif %}">
                   <a href="/budget">
                       <i class="fas fa-chart-bar"></i>
                       <p>Budgeting</p>
                   </a>
-              </li>
+              </li> -->
               <li class="nav-item {% if request.path == '/transactions' %}active{% endif %}">
                   <a href="/transactions">
                       <i class="fas fa-file"></i>
@@ -141,13 +141,13 @@
         <div class="main-header">
           <div class="main-header-logo">
             <!-- Logo Header -->
-            <div class="logo-header" data-background-color="dark">
-              <a href="index.html" class="logo">
+            <div class="logo-header" data-background-color="dark2">
+              <a href="/" class="logo">
                 <img
-                  src="static/img/kaiadmin/logo_light.svg"
+                  src="static/img/logo3.svg"
                   alt="navbar brand"
                   class="navbar-brand"
-                  height="20"
+                  height="60"
                 />
               </a>
               <div class="nav-toggle">
@@ -166,7 +166,7 @@
           </div>
           <!-- Navbar Header -->
           <nav
-            class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom"
+            class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom" {% if request.cookies.get("darkmode")=="dark" %}data-background-color="dark2"{% endif %}
           >
             <div class="container-fluid">
               <nav class="nav-item topbar-user dropdown hidden-caret">
@@ -189,9 +189,25 @@
                     <div class="dropdown-user-scroll scrollbar-outer" style="height: auto;">
                       
                       <li>
-                        <a class="dropdown-item" href="/profile.html">My Profile</a>
+                        <a class="dropdown-item" href="/profile">Edit Profile</a>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="/setting.html">Account Setting</a>
+                        
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" 
+                                {% if request.cookies.get("darkmode")=="dark" %}checked{% endif %}
+                                onchange="toggleDarkMode(this)">
+                            <label class="form-check-label" for="flexSwitchCheckDefault">Dark theme</label>
+                        </div>
+                        <script>
+                            function toggleDarkMode(checkbox) {
+                                const currentUrl = window.location.href; // Get the current URL
+                                const darkModeValue = checkbox.checked ? 'dark' : 'light';
+                                
+                                // Redirect to the theme endpoint with current URL as a query parameter
+                                window.location.href = `/theme?darkmode=${darkModeValue}&next=${encodeURIComponent(currentUrl)}`;
+                            }
+                        </script>
+
                         <div class="dropdown-divider"></div>
                         <form action="/logout" method="get" class="dropdown-item">
                             <button type="submit" class="btn btn-danger btn-sm">Logout</button>
@@ -203,6 +219,7 @@
               </ul>
             </div>
           </nav>
+
           <!-- End Navbar -->
         </div>
 
@@ -226,6 +243,13 @@
         </footer>
       </div>
     </div>
+    
+    <style>
+      {% if request.cookies.get("darkmode") == "dark" %}
+        .modal-content {background-color: #202940;}
+        th {color: white;}
+      {% endif %}
+    </style>
     <!--   Core JS Files   -->
     <script src="static/js/core/jquery-3.7.1.min.js"></script>
     <script src="static/js/core/popper.min.js"></script>
@@ -235,7 +259,8 @@
     <script src="static/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js"></script>
 
     <!-- Chart JS -->
-    <script src="static/js/plugin/chart.js/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
     <!-- jQuery Sparkline -->
     <script src="static/js/plugin/jquery.sparkline/jquery.sparkline.min.js"></script>

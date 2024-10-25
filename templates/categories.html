@@ -197,6 +197,11 @@
 
 
 {% block script %}
+{% if request.cookies.get("darkmode") == 'dark' %}
+    <style>
+        th {color: white !important;}
+    </style>
+{% endif %}
 <script>
     function openUpdateModal(id, name, transaction_type, description) {
         // Set form values

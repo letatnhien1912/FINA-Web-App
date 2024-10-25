@@ -120,7 +120,7 @@
 				        placeholder="fullname"
                 required
               />
-              <label for="fullname">Fullname</label>
+              <label for="fullname">Full Name</label>
             </div>
             <div class="form-floating form-floating-custom mb-3">
               <input
@@ -161,6 +161,20 @@
                 <i class="icon-eye"></i>
               </div>
             </div>
+            <div class="form-floating form-floating-custom mb-3">
+              <select
+                id="currency"
+                name="currency"
+                class="form-select"
+                required
+              >
+                <option value="" disabled selected>Select currency</option>
+                {% for currency in currencies %}
+                    <option value="{{ currency }}">{{ currency }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
             <div class="form-sub">
               <div id="confirm-password-error" class="invalid-feedback">Password and Confirm Password must be the same</div>
             </div>
@@ -180,8 +194,7 @@
           </div>
           <div class="row form-sub m-0">
             <div class="alert alert-warning alert-dismissible fade show" role="alert">
-              <strong>Important!</strong> This app is only a final project of Nhien Le so the app may not be developed and updated further.
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              <strong>Important!</strong> This app is only a study project of Nhien Le so it may not be updated frquently.
             </div>
           </div>
           <div class="form-action">

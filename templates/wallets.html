@@ -14,7 +14,7 @@
                 <button class="btn btn-primary btn-round ms-auto" data-bs-toggle="modal" data-bs-target="#addRowModal"
                     id="addRowButton">
                     <i class="fa fa-plus"></i>
-                    Add Wallet
+                    Add Asset/Debt Wallet
                 </button>
             </div>
         </div>
@@ -36,7 +36,8 @@
                 </div>
                 <div class="modal-body">
                   <p class="small">
-                    Create a new wallet by filling the information below
+                    Create a new wallet by filling the information below<br>
+                    Set the initial balance <strong class="text-danger">NEGATIVE</strong> if it is a debt that you owe others.
                   </p>
 
                   <!-- Add Wallet Form -->
@@ -44,11 +45,29 @@
                     <div class="row">
                       <div class="col-md-6">
                         <div class="form-group form-group-default">
-                          <label>Wallet Name</label>
+                          <label>Wallet/Debtor Name</label>
                           <input type="text" id="addWallet" name="wallet" class="form-control" placeholder="wallet name" required/>
                         </div>
                       </div>
+                      
                       <div class="col-md-6">
+                        <div class="form-group form-group-default">
+                          <label>Wallet Type</label>
+                          <select id="addWalletType" name="liability" class="form-control" required>
+                            <option value="" disabled selected hidden>select wallet type</option>
+                            <option value=0>Asset Wallet</option>
+                            <option value=1>Debt Wallet</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div class="form-group form-group-default">
+                          <label>Wallet/Debtor Initial Balance</label>
+                          <input type="number" step="0.01" id="addWalletBalance" name="initial_balance" class="form-control" placeholder="wallet initial balance" required/>
+                        </div>
+                      </div>
+                      <div class="col-md-12">
                         <div class="form-group form-group-default">
                           <label>Description</label>
                           <input id="addDescription" name="description" class="form-control" type="text"
@@ -79,9 +98,10 @@
                 <table id="multi-filter-select" class="display table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>Wallet name</th>
-                            <th>Description</th>
-                            <th style="text-align:center">Action</th>
+                            <th class="table-column-width-1">Wallet Name</th>
+                            <th class="table-column-width-2">Description</th>
+                            <th class="table-column-width-3">Initial Balance</th>
+                            <th class="table-column-width-4" style="text-align:center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,12 +109,14 @@
                         <tr>
                             <td>{{ wallet.wallet_name }}</td>
                             <td>{{ wallet.description }}</td>
+                            <td>{{ wallet.initial_balance | format_money }}</td>
                             <td style="text-align:center">
                                 <div class="form-button-action">
                                     <button type="button" data-bs-toggle="tooltip" title="Update"
                                         class="btn btn-link btn-primary btn-lg" 
                                         onclick="openUpdateModal({{ wallet.id }},
                                                                 '{{ wallet.wallet_name }}',
+                                                                {{ wallet.initial_balance}},
                                                                 '{{ wallet.description }}')">
                                         <i class="fa fa-edit"></i>
                                     </button>
@@ -117,9 +139,10 @@
                 <table id="multi-filter-select" class="display table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>Debtor/Creditor</th>
-                            <th>Description</th>
-                            <th style="text-align:center">Action</th>
+                            <th class="table-column-width-1">Debtor/Creditor</th>
+                            <th class="table-column-width-2">Description</th>
+                            <th class="table-column-width-3">Initial Balance</th>
+                            <th class="table-column-width-4" style="text-align:center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -127,12 +150,14 @@
                         <tr>
                             <td>{{ wallet.wallet_name }}</td>
                             <td>{{ wallet.description }}</td>
+                            <td>{{ wallet.initial_balance | format_money }}</td>
                             <td style="text-align:center">
                                 <div class="form-button-action">
                                     <button type="button" data-bs-toggle="tooltip" title="Update"
                                         class="btn btn-link btn-primary btn-lg" 
                                         onclick="openUpdateModal({{ wallet.id }},
                                                                 '{{ wallet.wallet_name }}',
+                                                                {{ wallet.initial_balance }},
                                                                 '{{ wallet.description }}')">
                                         <i class="fa fa-edit"></i>
                                     </button>
@@ -163,7 +188,7 @@
                         </div>
                         <div class="modal-body">
                             <p class="small">
-                                Update the wallet information below
+                                Set the initial balance <strong class="text-danger">NEGATIVE</strong> if it is a debt wallet.
                             </p>
             
                             <!-- Update Wallet Form -->
@@ -179,6 +204,13 @@
                                       </div>
                                     </div>
                                     <div class="col-md-6">
+                                        <div class="form-group form-group-default">
+                                          <label>Wallet Initial Balance</label>
+                                          <input type="number" step="0.01" id="updateWalletBalance" 
+                                          name="initial_balance" class="form-control" placeholder="wallet initial balance" required/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
                                       <div class="form-group form-group-default">
                                         <label>description</label>
                                         <input id="updateDescription" name="description" class="form-control" type="text"
@@ -201,6 +233,13 @@
                 </div>
             </div>
             
+            <!-- CSS to make column widths equal -->
+            <style>
+                .table-column-width-1 { width: 20%; }
+                .table-column-width-2 { width: 40%; }
+                .table-column-width-3 { width: 30%; }
+                .table-column-width-4 { width: 10%; }
+            </style>
         </div>
         
     </div>
@@ -209,11 +248,17 @@
 
 
 {% block script %}
+{% if request.cookies.get("darkmode") == 'dark' %}
+    <style>
+        th {color: white !important;}
+    </style>
+{% endif %}
 <script>
-    function openUpdateModal(id, name, description) {
+    function openUpdateModal(id, name, initial_balance, description) {
         // Set form values
         document.getElementById("updateWalletId").value = id;
         document.getElementById("updateWallet").value = name;
+        document.getElementById("updateWalletBalance").value = initial_balance;
         document.getElementById("updateDescription").value = description;
 
         // Show the modal
@@ -240,7 +285,7 @@
         }).then((willDelete) => {
             if (willDelete) {
                 // Proceed to delete the wallet
-                fetch('/wallets/delete', {
+                fetch('/wallets/delete?next=${encodeURIComponent(currentUrl)}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
