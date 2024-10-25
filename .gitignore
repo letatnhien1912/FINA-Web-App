@@ -1,2 +1,5 @@
-env
-__pycache__
+env/
+__pycache__/
+test.ipynb
+CS50 Final.xmind
+__init__.py
