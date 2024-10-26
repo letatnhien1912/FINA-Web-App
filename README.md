@@ -65,7 +65,7 @@ Follow these steps to set up the project locally:
 4. **Use the dashboards** to analyze your financial data and identify trends.
 
 ### Demo Account
-[**`Application Link`**](https://www.google.com)
+[**`Application Link`**](http://34.124.175.214:8000/)
 <br>**Username**: *demo*
 <br>**Password**: *123*
 
