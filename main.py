@@ -233,6 +233,9 @@ async def add_debt(request: Request,
         if wallet_to_first is None:
             crud.create_wallet(db=db, user_id=user_id, wallet_name=wallet_to, liability=1)
             wallet_to_first = crud.get_wallet_by_name(db=db, user_id=user_id, wallet_name=wallet_to)
+        
+    if transaction_type_id==3:
+        wallet_to_first = crud.get_wallet_by_id(db=db, wallet_id=int(wallet_to))
 
     print(wallet_to_first.id, wallet_to_first.wallet_name)
     # Create 2 transactions for the debt

@@ -283,7 +283,7 @@
                           <select list="debtorOptions" id="toWallet" name="wallet_to" class="form-control" required>
                             <option value="" selected disabled hidden>To wallet</option>
                             {% for wallet in all_options.wallets %}
-                              <option value="{{ wallet.name }}">{{ wallet.name }}</option>
+                              <option value="{{ wallet.id }}">{{ wallet.name }}</option>
                             {% endfor %}
                           </select>
                         </div>
